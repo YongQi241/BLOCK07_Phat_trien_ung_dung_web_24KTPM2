@@ -7,7 +7,10 @@
     "start": "node server.js",
     "seed": "node prisma/seed.js",
     "db:push": "prisma db push",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "test:mfa": "node --test tests/mfa.test.js",
+    "test:rbac": "node --test tests/rbac.test.js",
+    "test:abac": "node --test tests/abac.test.js"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +24,8 @@
     "ejs": "^7.0.1",
     "express": "^5.3.0",
     "method-override": "^3.0.0",
-    "nodemailer": "^10.3.1"
+    "nodemailer": "^10.3.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db');
-const { requireManager } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+const { requireDishPolicy } = require('../middleware/abac');
 
 // Bảo vệ toàn bộ khu vực Quản trị: Chỉ DUY NHẤT 1 email Manager được cấp quyền truy cập
-router.use(requireManager);
+router.use(requirePermission('view'));
 
 // Helper kiểm tra ID hợp lệ
 function parseId(rawId) {
@@ -37,7 +38,7 @@ router.get('/dishes', async (req, res, next) => {
 });
 
 // GET /admin/dishes/new - Form thêm món mới
-router.get('/dishes/new', async (req, res, next) => {
+router.get('/dishes/new', requirePermission('create'), async (req, res, next) => {
   try {
     const chefs = await prisma.chef.findMany({ orderBy: { id: 'asc' } });
     const ingredients = await prisma.ingredient.findMany({ orderBy: { id: 'asc' } });
@@ -64,7 +65,7 @@ router.get('/dishes/new', async (req, res, next) => {
 });
 
 // POST /admin/dishes - Xử lý thêm món mới (PRG pattern -> 303)
-router.post('/dishes', async (req, res, next) => {
+router.post('/dishes', requirePermission('create'), async (req, res, next) => {
   try {
     const { name, description, price, category, imageUrl, chefId, ingredientIds, available } = req.body;
     const errors = [];
@@ -129,7 +130,7 @@ router.post('/dishes', async (req, res, next) => {
 });
 
 // GET /admin/dishes/:id/edit - Form sửa món ăn
-router.get('/dishes/:id/edit', async (req, res, next) => {
+router.get('/dishes/:id/edit', requirePermission('edit'), requireDishPolicy('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -170,7 +171,7 @@ router.get('/dishes/:id/edit', async (req, res, next) => {
 });
 
 // PATCH /admin/dishes/:id - Xử lý cập nhật món ăn qua method-override (PRG -> 303)
-router.patch('/dishes/:id', async (req, res, next) => {
+router.patch('/dishes/:id', requirePermission('edit'), requireDishPolicy('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -255,7 +256,7 @@ router.patch('/dishes/:id', async (req, res, next) => {
 });
 
 // GET /admin/dishes/:id/delete - Trang xác nhận xóa món ăn
-router.get('/dishes/:id/delete', async (req, res, next) => {
+router.get('/dishes/:id/delete', requirePermission('delete'), requireDishPolicy('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -283,7 +284,7 @@ router.get('/dishes/:id/delete', async (req, res, next) => {
 });
 
 // DELETE /admin/dishes/:id - Xử lý xóa món ăn qua method-override (PRG -> 303)
-router.delete('/dishes/:id', async (req, res, next) => {
+router.delete('/dishes/:id', requirePermission('delete'), requireDishPolicy('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -329,7 +330,7 @@ router.get('/chefs', async (req, res, next) => {
 });
 
 // GET /admin/chefs/new - Form thêm đầu bếp
-router.get('/chefs/new', (req, res) => {
+router.get('/chefs/new', requirePermission('create'), (req, res) => {
   res.render('admin/chefs/new', {
     title: 'Thêm Đầu Bếp Mới',
     errors: [],
@@ -338,7 +339,7 @@ router.get('/chefs/new', (req, res) => {
 });
 
 // POST /admin/chefs - Thêm đầu bếp mới
-router.post('/chefs', async (req, res, next) => {
+router.post('/chefs', requirePermission('create'), async (req, res, next) => {
   try {
     const { name, specialty } = req.body;
     const errors = [];
@@ -371,7 +372,7 @@ router.post('/chefs', async (req, res, next) => {
 });
 
 // GET /admin/chefs/:id/edit - Form sửa đầu bếp
-router.get('/chefs/:id/edit', async (req, res, next) => {
+router.get('/chefs/:id/edit', requirePermission('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -395,7 +396,7 @@ router.get('/chefs/:id/edit', async (req, res, next) => {
 });
 
 // PATCH /admin/chefs/:id - Cập nhật đầu bếp
-router.patch('/chefs/:id', async (req, res, next) => {
+router.patch('/chefs/:id', requirePermission('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -436,7 +437,7 @@ router.patch('/chefs/:id', async (req, res, next) => {
 });
 
 // GET /admin/chefs/:id/delete - Xác nhận xóa đầu bếp
-router.get('/chefs/:id/delete', async (req, res, next) => {
+router.get('/chefs/:id/delete', requirePermission('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -458,7 +459,7 @@ router.get('/chefs/:id/delete', async (req, res, next) => {
 });
 
 // DELETE /admin/chefs/:id - Xóa đầu bếp
-router.delete('/chefs/:id', async (req, res, next) => {
+router.delete('/chefs/:id', requirePermission('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -497,7 +498,7 @@ router.get('/ingredients', async (req, res, next) => {
 });
 
 // GET /admin/ingredients/new - Form thêm nguyên liệu
-router.get('/ingredients/new', (req, res) => {
+router.get('/ingredients/new', requirePermission('create'), (req, res) => {
   res.render('admin/ingredients/new', {
     title: 'Thêm Nguyên Liệu Mới',
     errors: [],
@@ -506,7 +507,7 @@ router.get('/ingredients/new', (req, res) => {
 });
 
 // POST /admin/ingredients - Thêm nguyên liệu mới
-router.post('/ingredients', async (req, res, next) => {
+router.post('/ingredients', requirePermission('create'), async (req, res, next) => {
   try {
     const { name, unit } = req.body;
     const errors = [];
@@ -539,7 +540,7 @@ router.post('/ingredients', async (req, res, next) => {
 });
 
 // GET /admin/ingredients/:id/edit - Form sửa nguyên liệu
-router.get('/ingredients/:id/edit', async (req, res, next) => {
+router.get('/ingredients/:id/edit', requirePermission('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -563,7 +564,7 @@ router.get('/ingredients/:id/edit', async (req, res, next) => {
 });
 
 // PATCH /admin/ingredients/:id - Cập nhật nguyên liệu
-router.patch('/ingredients/:id', async (req, res, next) => {
+router.patch('/ingredients/:id', requirePermission('edit'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -604,7 +605,7 @@ router.patch('/ingredients/:id', async (req, res, next) => {
 });
 
 // GET /admin/ingredients/:id/delete - Xác nhận xóa nguyên liệu
-router.get('/ingredients/:id/delete', async (req, res, next) => {
+router.get('/ingredients/:id/delete', requirePermission('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
@@ -626,7 +627,7 @@ router.get('/ingredients/:id/delete', async (req, res, next) => {
 });
 
 // DELETE /admin/ingredients/:id - Xóa nguyên liệu
-router.delete('/ingredients/:id', async (req, res, next) => {
+router.delete('/ingredients/:id', requirePermission('delete'), async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (!id) {
